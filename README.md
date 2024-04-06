@@ -1,4 +1,2 @@
-# Portfolio
-Portfolio projects on Data Analysis, Data Visualization and Machine Learning
-
-Linkedin: https://www.linkedin.com/in/guilherme-s-rubio/
+# Causality and Experimentation
+Notes and code for teaching concepts of causal inference and experimentation (A/B Testint) + codes to use to solve real world problems.
