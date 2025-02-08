@@ -20,7 +20,7 @@ def calculate_sample_size(p0, lift, sig_level, power, alternative):
   return n
 
 
-  def plot_sample_size(lifts, n_values):
+def plot_sample_size(lifts, n_values):
   fig = go.Figure(data=go.Scatter(x=lifts, y=n_values))
   fig.update_layout(
     title='Sample size by lift',
