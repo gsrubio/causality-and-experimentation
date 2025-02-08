@@ -1,11 +1,10 @@
-import streamlit as st
-import plotly.express as px
-import pandas as pd
-from scipy.stats import norm
-import math
-from statsmodels.stats.power import TTestIndPower
-import plotly.graph_objects as go
+pip install streamlit plotly
+pip install streamlit numpy plotly statsmodels
 
+import streamlit as st  # For Streamlit UI
+import numpy as np  # For numerical operations
+import plotly.graph_objects as go  # For Plotly visualizations
+from statsmodels.stats.power import TTestIndPower  # For sample size calculation
 
 def calculate_sample_size(p0, lift, sig_level, power, alternative):
   """
