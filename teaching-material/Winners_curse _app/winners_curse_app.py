@@ -9,8 +9,8 @@ st.title("A/B Test Simulation and Analysis")
 
 # Sidebar parameters
 st.sidebar.header("Simulation Parameters")
-n_tests = st.sidebar.number_input("Number of A/B Tests", min_value=100, max_value=100000, value=10000, step=1000)
-n_obs = st.sidebar.number_input("Sample Size per Variant", min_value=1000, max_value=50000, value=10000, step=1000)
+n_tests = st.sidebar.number_input("Number of A/B Tests", min_value=1, max_value=1000000, value=10000, step=1000)
+n_obs = st.sidebar.number_input("Sample Size per Variant", min_value=100, max_value=1000000, value=10000, step=1000)
 conv_control = st.sidebar.slider("Baseline Conversion Rate", 0.01, 0.5, 0.2, 0.01)
 lift = st.sidebar.slider("Expected Lift (%)", 0.01, 0.5, 0.05, 0.01)
 alpha = st.sidebar.slider("Significance Level (α)", 0.01, 0.1, 0.05, 0.01)
