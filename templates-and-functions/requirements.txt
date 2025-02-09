@@ -1,3 +1,6 @@
 streamlit
+numpy
+pandas
+scipy
 plotly
 statsmodels
