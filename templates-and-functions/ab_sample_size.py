@@ -1,6 +1,3 @@
-pip install streamlit plotly
-pip install streamlit numpy plotly statsmodels
-
 import streamlit as st  # For Streamlit UI
 import numpy as np  # For numerical operations
 import plotly.graph_objects as go  # For Plotly visualizations
