@@ -12,7 +12,7 @@ st.sidebar.header("Simulation Parameters")
 n_tests = st.sidebar.number_input("Number of A/B Tests", min_value=1, max_value=1000000, value=10000, step=1000)
 n_obs = st.sidebar.number_input("Sample Size per Variant", min_value=100, max_value=1000000, value=10000, step=1000)
 conv_control = st.sidebar.slider("Baseline Conversion Rate", 0.01, 0.5, 0.2, 0.01)
-lift = st.sidebar.slider("Expected Lift (%)", 0.01, 0.5, 0.05, 0.01)
+lift = st.sidebar.slider("Real Lift (%)", 0.01, 0.5, 0.05, 0.01)
 alpha = st.sidebar.slider("Significance Level (α)", 0.01, 0.1, 0.05, 0.01)
 
 conv_variant = conv_control * (1 + lift)
@@ -40,17 +40,17 @@ if st.sidebar.button("Run Simulation"):
         exageration = effect / ((conv_variant - conv_control) / conv_control) if stat_sig == 1 else None
 
         # Save results
-        record = [n_obs, stat_sig, obs_effect, effect, p_value, exageration]
+        record = [n_obs, stat_sig, lift, obs_effect, effect, p_value, exageration]
         df.loc[len(df)] = record
 
     # Aggregate results
     df_grouped = df.groupby('n').agg({
         'stat_sig': 'mean',
-        'p-value': 'median',
-        'obs_effect': 'median',
+        #'p-value': 'median',
+        #'obs_effect': 'median',
         'effect': 'median',
         'exageration_ratio': 'median'
-    }).rename(columns={'stat_sig': 'power', 'obs_effect': 'avg_obs_effect', 'effect': 'avg_obs_effect_stat_sig'}).reset_index()
+    }).rename(columns={'n':'Sample Size per variant', 'stat_sig': 'Actual Power', 'lift':'Real Lift', 'effect': 'Avg Observed Lift (Signif. Tests)','exageration_ratio':'Exageration Ratio' }).reset_index()
 
     # Display summary table
     st.subheader("Summary of Simulated A/B Tests")
@@ -67,28 +67,28 @@ if st.sidebar.button("Run Simulation"):
     fig = go.Figure()
 
     # Define colors
-    colors = {0: "rgba(0, 100, 255, 0.5)", 1: "rgba(255, 50, 50, 0.6)"}
+    colors = {0: "rgba(255, 50, 50, 0.6)", 1: "rgba(0, 100, 255, 0.5)"}
 
     # Add histogram for stat_sig == 0 (Not Significant)
     fig.add_trace(go.Histogram(
         x=df[df['stat_sig'] == 0]['obs_effect'],
-        name="Not Significant (p ≥ 0.05)",
-        marker=dict(color=colors[0], line=dict(color='blue', width=1.2)),
+        name="Not Significant",
+        marker=dict(color=colors[0], line=dict(color='red', width=1.2)),
         opacity=0.6,
         hovertemplate="<b>Category:</b> Not Significant<br>"
-                      "<b>Bin Range:</b> %{x}<br>"
-                      "<b>Count:</b> %{y}<extra></extra>"
+                    "<b>Bin Range:</b> %{x}<br>"
+                    "<b>Count:</b> %{y}<extra></extra>"
     ))
 
     # Add histogram for stat_sig == 1 (Significant)
     fig.add_trace(go.Histogram(
         x=df[df['stat_sig'] == 1]['obs_effect'],
-        name="Significant (p < 0.05)",
-        marker=dict(color=colors[1], line=dict(color='red', width=1.2)),
+        name="Significant",
+        marker=dict(color=colors[1], line=dict(color='blue', width=1.2)),
         opacity=0.7,
         hovertemplate="<b>Category:</b> Significant<br>"
-                      "<b>Bin Range:</b> %{x}<br>"
-                      "<b>Count:</b> %{y}<extra></extra>"
+                    "<b>Bin Range:</b> %{x}<br>"
+                    "<b>Count:</b> %{y}<extra></extra>"
     ))
 
     # Add vertical line for the mean observed effect (Significant category only)
@@ -102,13 +102,41 @@ if st.sidebar.button("Run Simulation"):
         )
     )
 
-    # Add annotation for the vertical line, including the numeric value
+    # Add vertical line for the real lift (gray, dashed)
+    fig.add_shape(
+        dict(
+            type="line",
+            x0=lift, x1=lift,
+            y0=0, y1=1,
+            xref='x', yref='paper',
+            line=dict(color="gray", width=2, dash="dot")  # Gray, dotted line
+        )
+    )
+
+    # Add annotation for the real lift
+    fig.add_annotation(
+        x=lift,
+        y=0.9,  # Position annotation at 90% height
+        xref="x",
+        yref="paper",
+        text=f"<b>Real Lift:</b><br>{lift:.4f}",
+        showarrow=True,
+        arrowhead=2,
+        ax=-40,  # Offset annotation
+        ay=-40,
+        font=dict(size=12, color="black"),
+        bgcolor="rgba(200, 200, 200, 0.8)",  # Light gray background for readability
+        bordercolor="black",
+        borderwidth=1
+    )
+
+    # Add annotation for the mean observed effect
     fig.add_annotation(
         x=mean_effect_sig,
         y=0.95,  # Position at 95% height
         xref="x",
         yref="paper",
-        text=f"<b>Avg Observed Effect (Significant):</b><br>{mean_effect_sig:.4f}",
+        text=f"<b>Avg Obs. Effect (Signif.):</b><br>{mean_effect_sig:.4f}",
         showarrow=True,
         arrowhead=2,
         ax=40,  # Offset annotation
@@ -119,18 +147,47 @@ if st.sidebar.button("Run Simulation"):
         borderwidth=1
     )
 
-    # Update layout
+    # Update layout for better aesthetics
     fig.update_layout(
         width=900,
         height=550,
-        title=dict(text="Histogram of Observed Effects", font=dict(size=20, family="Arial Bold"), x=0.5),
-        xaxis=dict(title="Observed Effect", title_font=dict(size=16), tickfont=dict(size=12), showgrid=True),
-        yaxis=dict(title="Count", title_font=dict(size=16), tickfont=dict(size=12), showgrid=True),
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        bargap=0.1,
-        barmode="overlay",
-        legend=dict(title="Statistical Significance", font=dict(size=14), bgcolor="rgba(240,240,240,0.8)")
+        title=dict(
+            text="Histogram of Observed Effects",
+            font=dict(size=20, family="Arial Bold"),
+            x=0.5  # Center the title
+        ),
+        xaxis=dict(
+            title="Observed Effect",
+            title_font=dict(size=16),
+            tickfont=dict(size=12),
+            showgrid=False,  # ⬅️ Remove gridlines
+            zeroline=False,
+            showline=True,
+            linewidth=1.2,
+            linecolor="black"
+        ),
+        yaxis=dict(
+            title="Count",
+            title_font=dict(size=16),
+            tickfont=dict(size=12),
+            showgrid=False,  # ⬅️ Remove gridlines
+            zeroline=False,
+            showline=True,
+            linewidth=1.2,
+            linecolor="black"
+        ),
+        plot_bgcolor='rgba(0,0,0,0)',  # Remove background color (transparent)
+        paper_bgcolor='rgba(0,0,0,0)',  # Remove outer background color (transparent)
+        bargap=0.1,  # Spacing between bars
+        bargroupgap=0.05,
+        barmode="overlay",  # Overlay bars for better comparison
+        legend=dict(
+            title="Statistical Significance",
+            font=dict(size=14),
+            bgcolor="rgba(240,240,240,0.8)",  # Light grey background for clarity
+            bordercolor="black",
+            borderwidth=1
+        )
     )
 
     # Display histogram
