@@ -49,7 +49,7 @@ if st.sidebar.button("Run Simulation"):
     summary = {
         "Total Tests": f"{df['n'].count():,}",  # No decimal places
         "Significant Tests": f"{df['stat_sig'].sum():,}",  # No decimal places, thousand separator
-        "Actual Power": f"{df['stat_sig'].mean(:.2%)}",  # Percent format
+        "Actual Power": f"{df['stat_sig'].mean():.2%}",  # Percent format
         "Median Observed Lift (Signif. Tests)": f"{df.loc[df['stat_sig'] == 1, 'effect'].median():.2%}",  # Percent format
         "Exaggeration Ratio": f"{df['exageration_ratio'].median():.2f}"  # Two decimal places
     }
