@@ -1,7 +1,9 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.patches as mpatches
 from statsmodels.stats.proportion import proportions_ztest
 
 # --- Streamlit UI ---
@@ -43,13 +45,11 @@ if st.sidebar.button("Run Simulation"):
         record = [n_obs, stat_sig, obs_effect, effect, p_value, exageration]
         df.loc[len(df)] = record
 
-    # Aggregate results
-
     # Compute summary statistics
     summary = {
         "Total Tests": f"{df['n'].count():,}",  # No decimal places
         "Significant Tests": f"{df['stat_sig'].sum():,}",  # No decimal places, thousand separator
-        "Actual Power": df["stat_sig"].mean(),
+        "Actual Power": f"{df['stat_sig'].mean(:.2%)}",  # Percent format
         "Median Observed Lift (Signif. Tests)": f"{df.loc[df['stat_sig'] == 1, 'effect'].median():.2%}",  # Percent format
         "Exaggeration Ratio": f"{df['exageration_ratio'].median():.2f}"  # Two decimal places
     }
@@ -70,130 +70,49 @@ if st.sidebar.button("Run Simulation"):
     # Compute the mean observed effect for stat_sig == 1
     mean_effect_sig = df[df['stat_sig'] == 1]['obs_effect'].mean()
 
-    # Create the histogram figure
-    fig = go.Figure()
-
     # Define colors
-    colors = {0: "rgba(255, 50, 50, 0.6)", 1: "rgba(0, 100, 255, 0.5)"}
+    colors = {0: "#FF3232", 1: "#0064FF"}  # Red for Not Significant, Blue for Significant
 
-    # Add histogram for stat_sig == 0 (Not Significant)
-    fig.add_trace(go.Histogram(
-        x=df[df['stat_sig'] == 0]['obs_effect'],
-        name="Not Significant",
-        marker=dict(color=colors[0], line=dict(color='red', width=1.2)),
-        opacity=0.6,
-        hovertemplate="<b>Category:</b> Not Significant<br>"
-                    "<b>Bin Range:</b> %{x}<br>"
-                    "<b>Count:</b> %{y}<extra></extra>"
-    ))
+    # Create Seaborn figure and axis
+    fig, ax = plt.subplots(figsize=(10, 6))
 
-    # Add histogram for stat_sig == 1 (Significant)
-    fig.add_trace(go.Histogram(
-        x=df[df['stat_sig'] == 1]['obs_effect'],
-        name="Significant",
-        marker=dict(color=colors[1], line=dict(color='blue', width=1.2)),
-        opacity=0.7,
-        hovertemplate="<b>Category:</b> Significant<br>"
-                    "<b>Bin Range:</b> %{x}<br>"
-                    "<b>Count:</b> %{y}<extra></extra>"
-    ))
+    # Plot a single histogram with segmentation by `stat_sig`
+    sns.histplot(df, x="obs_effect", bins=50, hue="stat_sig", multiple="stack", 
+                 palette=colors, edgecolor='black', alpha=0.7, ax=ax)
 
-    # Add vertical line for the mean observed effect (Significant category only)
-    fig.add_shape(
-        dict(
-            type="line",
-            x0=mean_effect_sig, x1=mean_effect_sig,
-            y0=0, y1=1,  # Scale to full height
-            xref='x', yref='paper',
-            line=dict(color="black", width=2, dash="dash")
-        )
-    )
+    # Add vertical line for Mean Observed Effect (Significant)
+    ax.axvline(mean_effect_sig, color="black", linestyle="dashed", linewidth=2)
 
-    # Add vertical line for the real lift (gray, dashed)
-    fig.add_shape(
-        dict(
-            type="line",
-            x0=lift, x1=lift,
-            y0=0, y1=1,
-            xref='x', yref='paper',
-            line=dict(color="gray", width=2, dash="dot")  # Gray, dotted line
-        )
-    )
-    # Add annotation for the real lift
-    fig.add_annotation(
-        x=lift,
-        y=0.85,  # Position annotation at 85% height
-        xref="x",
-        yref="paper",
-        text=f"<b>Real Lift:</b><br>{lift:.4f}",
-        showarrow=True,
-        arrowhead=2,
-        ax=-40,  # Offset annotation
-        ay=-40,
-        font=dict(size=12, color="black"),
-        bgcolor="rgba(200, 200, 200, 0.8)",  # Light gray background for readability
-        bordercolor="black",
-        borderwidth=1
-    )
-    # Add annotation for the mean observed effect
-    fig.add_annotation(
-        x=mean_effect_sig,
-        y=0.95,  # Position at 95% height
-        xref="x",
-        yref="paper",
-        text=f"<b>Avg Obs. Effect (Signif.):</b><br>{mean_effect_sig:.4f}",
-        showarrow=True,
-        arrowhead=2,
-        ax=40,  # Offset annotation
-        ay=-40,
-        font=dict(size=12, color="black"),
-        bgcolor="rgba(255, 255, 255, 0.8)",  # Light background for readability
-        bordercolor="black",
-        borderwidth=1
-    )
+    # Add vertical line for Real Lift
+    ax.axvline(lift, color="gray", linestyle="dotted", linewidth=2)
 
-    # Update layout for better aesthetics
-    fig.update_layout(
-        width=900,
-        height=550,
-        title=dict(
-            text="Histogram of Observed Effects",
-            font=dict(size=20, family="Arial Bold"),
-            x=0.5  # Center the title
-        ),
-        xaxis=dict(
-            title="Observed Effect",
-            title_font=dict(size=16),
-            tickfont=dict(size=12),
-            showgrid=False,  # ⬅️ Remove gridlines
-            zeroline=False,
-            showline=True,
-            linewidth=1.2,
-            linecolor="black"
-        ),
-        yaxis=dict(
-            title="Count",
-            title_font=dict(size=16),
-            tickfont=dict(size=12),
-            showgrid=False,  # ⬅️ Remove gridlines
-            zeroline=False,
-            showline=True,
-            linewidth=1.2,
-            linecolor="black"
-        ),
-        plot_bgcolor='rgba(0,0,0,0)',  # Remove background color (transparent)
-        paper_bgcolor='rgba(0,0,0,0)',  # Remove outer background color (transparent)
-        bargap=0.1,  # Spacing between bars
-        bargroupgap=0.05,
-        barmode="overlay",  # Overlay bars for better comparison
-        legend=dict(
-            title="Statistical Significance",
-            font=dict(size=14),
-            bgcolor="rgba(240,240,240,0.8)",  # Light grey background for clarity
-            bordercolor="black",
-            borderwidth=1
-        )
-    )
+    # Add annotation for Real Lift
+    ax.annotate(f"Real Lift: {lift:.4f}", xy=(lift, ax.get_ylim()[1] * 0.9), 
+                xytext=(-50, 10), textcoords="offset points",
+                fontsize=12, color="black", bbox=dict(facecolor="lightgray", edgecolor="black", boxstyle="round,pad=0.3"),
+                arrowprops=dict(arrowstyle="->", color="black"))
 
-    # Display histogram
-    st.plotly_chart(fig)
+    # Add annotation for Mean Observed Effect
+    ax.annotate(f"Avg Obs. Effect (Signif.): {mean_effect_sig:.4f}", xy=(mean_effect_sig, ax.get_ylim()[1] * 0.9), 
+                xytext=(50, 10), textcoords="offset points",
+                fontsize=12, color="black", bbox=dict(facecolor="white", edgecolor="black", boxstyle="round,pad=0.3"),
+                arrowprops=dict(arrowstyle="->", color="black"))
+
+    # Customize aesthetics
+    ax.set_title("Histogram of Observed Effects", fontsize=18, fontweight="bold", loc="left")
+    ax.set_xlabel("Observed Effect", fontsize=14)
+    ax.set_ylabel("Count", fontsize=14)
+
+    # Create a custom legend with only the segments
+    legend_patches = [
+        mpatches.Patch(color=colors[1], label="Significant"),
+        mpatches.Patch(color=colors[0], label="Not Significant")
+    ]
+    ax.legend(handles=legend_patches, title="Statistical Significance", fontsize=12, title_fontsize=14, loc="upper center", bbox_to_anchor=(0.8, 0.8), ncol=1)
+
+    # Remove unnecessary spines and gridlines
+    sns.despine()
+    ax.grid(False)
+
+    # Display the Seaborn plot in Streamlit
+    st.pyplot(fig)
