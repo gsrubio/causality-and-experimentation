@@ -44,18 +44,25 @@ if st.sidebar.button("Run Simulation"):
         df.loc[len(df)] = record
 
     # Aggregate results
-    df_grouped = df.groupby('n').agg({
-        'stat_sig': 'mean',
-        #'p-value': 'median',
-        #'obs_effect': 'median',
-        'effect': 'median',
-        'exageration_ratio': 'median'
-    }).rename(columns={'n':'Sample Size per variant', 'stat_sig': 'Actual Power', 'effect': 'Avg Observed Lift (Signif. Tests)','exageration_ratio':'Exageration Ratio' }).reset_index()
+
+    # Compute summary statistics
+    summary = {
+        "Total Tests": f"{df['n'].count():,}",  # No decimal places
+        "Significant Tests": f"{df['stat_sig'].sum():,}",  # No decimal places, thousand separator
+        "Actual Power": df["stat_sig"].mean(),
+        "Median Observed Lift (Signif. Tests)": f"{df.loc[df['stat_sig'] == 1, 'effect'].median():.2%}",  # Percent format
+        "Exaggeration Ratio": f"{df['exageration_ratio'].median():.2f}"  # Two decimal places
+    }
+    summary_df = pd.DataFrame([summary])
+
+    # Display first records of experiments
+    st.write("📊 **First 10 Simulated A/B Tests:**")
+    st.dataframe(df.head(10))
 
     # Display summary table
     st.subheader("Summary of Simulated A/B Tests")
     st.write("📊 **Aggregated results from simulated tests:**")
-    st.dataframe(df_grouped)
+    st.dataframe(summary)
 
     # --- Visualization ---
     st.subheader("Distribution of Observed Effects")
