@@ -40,7 +40,7 @@ if st.sidebar.button("Run Simulation"):
         exageration = effect / ((conv_variant - conv_control) / conv_control) if stat_sig == 1 else None
 
         # Save results
-        record = [n_obs, stat_sig, lift, obs_effect, effect, p_value, exageration]
+        record = [n_obs, stat_sig, obs_effect, effect, p_value, exageration]
         df.loc[len(df)] = record
 
     # Aggregate results
@@ -50,7 +50,7 @@ if st.sidebar.button("Run Simulation"):
         #'obs_effect': 'median',
         'effect': 'median',
         'exageration_ratio': 'median'
-    }).rename(columns={'n':'Sample Size per variant', 'stat_sig': 'Actual Power', 'lift':'Real Lift', 'effect': 'Avg Observed Lift (Signif. Tests)','exageration_ratio':'Exageration Ratio' }).reset_index()
+    }).rename(columns={'n':'Sample Size per variant', 'stat_sig': 'Actual Power', 'effect': 'Avg Observed Lift (Signif. Tests)','exageration_ratio':'Exageration Ratio' }).reset_index()
 
     # Display summary table
     st.subheader("Summary of Simulated A/B Tests")
@@ -112,11 +112,10 @@ if st.sidebar.button("Run Simulation"):
             line=dict(color="gray", width=2, dash="dot")  # Gray, dotted line
         )
     )
-
     # Add annotation for the real lift
     fig.add_annotation(
         x=lift,
-        y=0.9,  # Position annotation at 90% height
+        y=0.85,  # Position annotation at 85% height
         xref="x",
         yref="paper",
         text=f"<b>Real Lift:</b><br>{lift:.4f}",
@@ -129,7 +128,6 @@ if st.sidebar.button("Run Simulation"):
         bordercolor="black",
         borderwidth=1
     )
-
     # Add annotation for the mean observed effect
     fig.add_annotation(
         x=mean_effect_sig,
