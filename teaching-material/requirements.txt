@@ -4,3 +4,5 @@ pandas
 scipy
 plotly
 statsmodels
+seaborn
+matplotlib
