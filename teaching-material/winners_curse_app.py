@@ -65,7 +65,7 @@ if st.sidebar.button("Run Simulation"):
     
     fig = px.scatter(
         df.head(100),
-        x=df.index[:100],
+        x=df.iloc[:100].index,  # Ensure valid x-axis
         y='obs_effect',
         color=df['stat_sig'][:100].astype(str),  # Ensure categorical mapping
         color_discrete_map={"0": "blue", "1": "red"},  # Inverted colors
@@ -73,9 +73,9 @@ if st.sidebar.button("Run Simulation"):
         labels={"stat_sig": "Stat Sig", "x": "Experiment #", "obs_effect": "Lift"},  # Rename labels
         template='plotly_dark'
     )
-    # Add title
-    fig.update_layout(title_text="First 100 Experiment Results", title_x=0.5)  # Center-align title
 
+    fig.update_layout(title_text="First 100 Experiment Results", title_x=0.5)  # Centered title
+    
     st.plotly_chart(fig)  # Display Plotly scatter plot in Streamlit
 
     # --- Histogram Visualization ---
