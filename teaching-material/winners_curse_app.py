@@ -63,19 +63,42 @@ if st.sidebar.button("Run Simulation"):
     # --- Insert Scatter Plot ---
     st.subheader("Observed Lift by Experiment")
     
-    fig = px.scatter(
-        df.head(100),
-        x=df.iloc[:100].index,  # Ensure valid x-axis
-        y='obs_effect',
-        color=df['stat_sig'][:100].astype(str),  # Ensure categorical mapping
-        color_discrete_map={"0": "blue", "1": "red"},  # Inverted colors
-        category_orders={"stat_sig": ["0", "1"]},  # Ensure order
-        labels={"stat_sig": "Stat Sig", "x": "Experiment #", "obs_effect": "Lift"},  # Rename labels
-        template='plotly_dark'
+    # Define colors for stat_sig categories
+    color_map = {1: "blue", 0: "red"}
+
+    # Subset first 100 experiments
+    df_subset = df.head(100)
+
+    # Create scatter plot traces for each category
+    trace_0 = go.Scatter(
+        x=df_subset[df_subset["stat_sig"] == 0].index,
+        y=df_subset[df_subset["stat_sig"] == 0]["obs_effect"],
+        mode="markers",
+        marker=dict(color=color_map[0], size=8),
+        name="Not Significant"
     )
 
-    fig.update_layout(title_text="First 100 Experiment Results", title_x=0.5)  # Centered title
-    
+    trace_1 = go.Scatter(
+        x=df_subset[df_subset["stat_sig"] == 1].index,
+        y=df_subset[df_subset["stat_sig"] == 1]["obs_effect"],
+        mode="markers",
+        marker=dict(color=color_map[1], size=8),
+        name="Significant"
+    )
+
+    # Create the figure
+    fig = go.Figure([trace_0, trace_1])
+
+    # Update layout
+    fig.update_layout(
+        title="First 100 Experiment Results",
+        title_x=0.5,  # Center-align title
+        xaxis_title="Experiment #",
+        yaxis_title="Lift",
+        template="plotly_dark",
+        legend_title="Stat Sig"
+    )
+
     st.plotly_chart(fig)  # Display Plotly scatter plot in Streamlit
 
     # --- Histogram Visualization ---
