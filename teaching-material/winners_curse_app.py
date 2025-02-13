@@ -76,7 +76,10 @@ if st.sidebar.button("Run Simulation"):
         y=df_subset[df_subset["stat_sig"] == 0]["obs_effect"],
         mode="markers",
         marker=dict(color=color_map[0], size=8),
-        name="Not Significant"
+        name="Not Significant",
+        hovertemplate="<b>Experiment #</b>: %{x}<br>" +
+                    "<b>Observed Lift</b>: %{y:.4f}<br>" +
+                    "<b>Stat Sig</b>: Not Significant<extra></extra>"  # Remove extra trace box
     )
 
     trace_1 = go.Scatter(
@@ -84,9 +87,12 @@ if st.sidebar.button("Run Simulation"):
         y=df_subset[df_subset["stat_sig"] == 1]["obs_effect"],
         mode="markers",
         marker=dict(color=color_map[1], size=8),
-        name="Significant"
+        name="Significant",
+        hovertemplate="<b>Experiment #</b>: %{x}<br>" +
+                    "<b>Observed Lift</b>: %{y:.4f}<br>" +
+                    "<b>Stat Sig</b>: Significant<extra></extra>"
     )
-
+    
     # Create the figure
     fig = go.Figure([trace_0, trace_1])
 
