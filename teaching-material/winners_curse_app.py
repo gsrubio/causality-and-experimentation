@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import plotly.graph_objects as go
 import matplotlib.patches as mpatches
 from statsmodels.stats.proportion import proportions_ztest
 
