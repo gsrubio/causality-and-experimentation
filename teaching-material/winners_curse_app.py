@@ -11,11 +11,11 @@ st.title("A/B Test Simulation and Analysis")
 
 # Sidebar parameters
 st.sidebar.header("Simulation Parameters")
-n_tests = st.sidebar.number_input("Number of A/B Tests", min_value=1, max_value=1000000, value=10000, step=1000)
+n_tests = st.sidebar.number_input("Number of A/B Tests", min_value=1, max_value=10000, value=10000, step=1000)
 n_obs = st.sidebar.number_input("Sample Size per Variant", min_value=100, max_value=1000000, value=10000, step=1000)
 conv_control = st.sidebar.slider("Baseline Conversion Rate", 0.01, 0.5, 0.2, 0.01)
-lift = st.sidebar.slider("Real Lift (%)", 0.01, 0.5, 0.05, 0.01)
 alpha = st.sidebar.slider("Significance Level (α)", 0.01, 0.1, 0.05, 0.01)
+lift = st.sidebar.slider("Real Lift (%)", 0.01, 0.5, 0.05, 0.01)
 
 conv_variant = conv_control * (1 + lift)
 
@@ -24,7 +24,7 @@ if st.sidebar.button("Run Simulation"):
     st.write("🔄 Running A/B Test Simulations...")
 
     # Create DataFrame
-    df = pd.DataFrame(columns=('n', 'stat_sig', 'obs_effect', 'effect', 'p-value', 'exageration_ratio'))
+    df = pd.DataFrame(columns=('n', 'obs_effect', 'effect', 'p-value', 'stat_sig', 'exageration_ratio'))
 
     # Simulate A/B tests
     for _ in range(n_tests):
@@ -42,29 +42,43 @@ if st.sidebar.button("Run Simulation"):
         exageration = effect / ((conv_variant - conv_control) / conv_control) if stat_sig == 1 else None
 
         # Save results
-        record = [n_obs, stat_sig, obs_effect, effect, p_value, exageration]
+        record = [n_obs, obs_effect, effect, p_value, stat_sig, exageration]
         df.loc[len(df)] = record
 
     # Compute summary statistics
     summary = {
         "Total Tests": f"{df['n'].count():,}",  # No decimal places
         "Significant Tests": f"{df['stat_sig'].sum():,}",  # No decimal places, thousand separator
-        "Actual Power": f"{df['stat_sig'].mean():.2%}",  # Percent format
-        "Median Observed Lift (Signif. Tests)": f"{df.loc[df['stat_sig'] == 1, 'effect'].median():.2%}",  # Percent format
-        "Exaggeration Ratio": f"{df['exageration_ratio'].median():.2f}"  # Two decimal places
+        "Observed Power": f"{df['stat_sig'].mean():.2%}",  # Percent format
+        "Avg Observed Lift (Signif. Tests)": f"{df.loc[df['stat_sig'] == 1, 'effect'].mean():.2%}",  # Percent format
+        "Avg Exaggeration Ratio": f"{df['exageration_ratio'].mean():.2f}"  # Two decimal places
     }
     summary_df = pd.DataFrame([summary])
-
-    # Display first records of experiments
-    st.write("📊 **First 10 Simulated A/B Tests:**")
-    st.dataframe(df.head(10))
 
     # Display summary table
     st.subheader("Summary of Simulated A/B Tests")
     st.write("📊 **Aggregated results from simulated tests:**")
     st.dataframe(summary)
 
-    # --- Visualization ---
+    # --- Insert Scatter Plot ---
+    st.subheader("Observed Lift by Experiment")
+    
+    fig = px.scatter(
+        df.head(100),
+        x=df.index[:100],
+        y='obs_effect',
+        color=df['stat_sig'][:100].astype(str),  # Ensure categorical mapping
+        color_discrete_map={"0": "blue", "1": "red"},  # Inverted colors
+        category_orders={"stat_sig": ["0", "1"]},  # Ensure order
+        labels={"stat_sig": "Stat Sig", "x": "Experiment #", "obs_effect": "Lift"},  # Rename labels
+        template='plotly_dark'
+    )
+    # Add title
+    fig.update_layout(title_text="First 100 Experiment Results", title_x=0.5)  # Center-align title
+
+    st.plotly_chart(fig)  # Display Plotly scatter plot in Streamlit
+
+    # --- Histogram Visualization ---
     st.subheader("Distribution of Observed Effects")
 
     # Compute the mean observed effect for stat_sig == 1
@@ -84,7 +98,7 @@ if st.sidebar.button("Run Simulation"):
     ax.axvline(mean_effect_sig, color="black", linestyle="dashed", linewidth=2)
 
     # Add vertical line for Real Lift
-    ax.axvline(lift, color="gray", linestyle="dotted", linewidth=2)
+    ax.axvline(lift, color="black", linestyle="dotted", linewidth=2)
 
     # Add annotation for Real Lift
     ax.annotate(f"Real Lift: {lift:.4f}", xy=(lift, ax.get_ylim()[1] * 0.9), 
@@ -99,8 +113,8 @@ if st.sidebar.button("Run Simulation"):
                 arrowprops=dict(arrowstyle="->", color="black"))
 
     # Customize aesthetics
-    ax.set_title("Histogram of Observed Effects", fontsize=18, fontweight="bold", loc="left")
-    ax.set_xlabel("Observed Effect", fontsize=14)
+    ax.set_title("Histogram of Observed Lifts", fontsize=18, fontweight="bold", loc="left")
+    ax.set_xlabel("Observed Lift", fontsize=14)
     ax.set_ylabel("Count", fontsize=14)
 
     # Create a custom legend with only the segments
