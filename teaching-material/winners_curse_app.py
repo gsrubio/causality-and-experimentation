@@ -6,32 +6,39 @@ import seaborn as sns
 import plotly.graph_objects as go
 import matplotlib.patches as mpatches
 from statsmodels.stats.proportion import proportions_ztest
+import matplotlib.ticker as mticker  # Import PercentFormatter
+
 
 # --- Streamlit UI ---
-st.title("A/B Test Simulation and Analysis")
+st.title("Winner's Curse - A/B Test Simulations")
+st.write("Winner's curse is a phenomenon where 'winning variants' in underpowered experiments tend to show inflated lifts.")
 
 # Sidebar parameters
 st.sidebar.header("Simulation Parameters")
-n_tests = st.sidebar.number_input("Number of A/B Tests", min_value=1, max_value=10000, value=10000, step=1000)
+st.sidebar.write("10,000 A/B tests will be simulated with the following parameters:")
+n_tests = 10000
 n_obs = st.sidebar.number_input("Sample Size per Variant", min_value=100, max_value=1000000, value=10000, step=1000)
-conv_control = st.sidebar.slider("Baseline Conversion Rate", 0.01, 0.5, 0.2, 0.01)
+conv_control = st.sidebar.slider("Baseline CVR", 0.01, 0.5, 0.2, 0.01)
+lift = st.sidebar.slider("Real Lift (%)", 0.01, 0.2, 0.05, 0.01)
 alpha = st.sidebar.slider("Significance Level (α)", 0.01, 0.1, 0.05, 0.01)
-lift = st.sidebar.slider("Real Lift (%)", 0.01, 0.5, 0.05, 0.01)
 
 conv_variant = conv_control * (1 + lift)
+n_tests = 10000
 
 # Button to run the simulation
 if st.sidebar.button("Run Simulation"):
-    st.write("🔄 Running A/B Test Simulations...")
+    #st.write("🔄 Running A/B Test Simulations...")
 
     # Create DataFrame
-    df = pd.DataFrame(columns=('n', 'obs_effect', 'effect', 'p-value', 'stat_sig', 'exageration_ratio'))
+    df = pd.DataFrame(columns=('n', 'obs_effect', 'effect', 'p-value', 'stat_sig', 'exageration_ratio', 'obs_control', 'obs_variant'))
 
     # Simulate A/B tests
     for _ in range(n_tests):
         # Sample from control and variant distributions
         success_A = np.random.binomial(n_obs, conv_control)
         success_B = np.random.binomial(n_obs, conv_variant)
+        obs_control = success_A / n_obs
+        obs_variant = success_B / n_obs
 
         # Perform hypothesis testing
         count = np.array([success_B, success_A])
@@ -43,13 +50,13 @@ if st.sidebar.button("Run Simulation"):
         exageration = effect / ((conv_variant - conv_control) / conv_control) if stat_sig == 1 else None
 
         # Save results
-        record = [n_obs, obs_effect, effect, p_value, stat_sig, exageration]
+        record = [n_obs, obs_effect, effect, p_value, stat_sig, exageration, obs_control, obs_variant]
         df.loc[len(df)] = record
 
     # Compute summary statistics
     summary = {
         "Total Tests": f"{df['n'].count():,}",  # No decimal places
-        "Significant Tests": f"{df['stat_sig'].sum():,}",  # No decimal places, thousand separator
+        "Significant Tests": f"{int(df['stat_sig'].sum()):,}",  # No decimal places, thousand separator
         "Observed Power": f"{df['stat_sig'].mean():.2%}",  # Percent format
         "Avg Observed Lift (Signif. Tests)": f"{df.loc[df['stat_sig'] == 1, 'effect'].mean():.2%}",  # Percent format
         "Avg Exaggeration Ratio": f"{df['exageration_ratio'].mean():.2f}"  # Two decimal places
@@ -57,59 +64,13 @@ if st.sidebar.button("Run Simulation"):
     summary_df = pd.DataFrame([summary])
 
     # Display summary table
-    st.subheader("Summary of Simulated A/B Tests")
-    st.write("📊 **Aggregated results from simulated tests:**")
+    #st.subheader("Summary of Simulated A/B Tests")
+    st.subheader("📊 **Aggregated results from simulated tests:**")
+    #st.write(f"\nThe simulations used a 'Real' Control CVR = {conv_control:.2%} and 'Real' Variant CVR = {conv_variant:.2%} ({lift:.0%} 'Real' Lift).")
     st.dataframe(summary)
 
-    # --- Insert Scatter Plot ---
-    st.subheader("Observed Lift by Experiment")
-    
-    # Define colors for stat_sig categories
-    color_map = {1: "blue", 0: "red"}
-
-    # Subset first 100 experiments
-    df_subset = df.head(100)
-
-    # Create scatter plot traces for each category
-    trace_0 = go.Scatter(
-        x=df_subset[df_subset["stat_sig"] == 0].index,
-        y=df_subset[df_subset["stat_sig"] == 0]["obs_effect"],
-        mode="markers",
-        marker=dict(color=color_map[0], size=8),
-        name="Not Significant",
-        hovertemplate="<b>Experiment #</b>: %{x}<br>" +
-                    "<b>Observed Lift</b>: %{y:.4f}<br>" +
-                    "<b>Stat Sig</b>: Not Significant<extra></extra>"  # Remove extra trace box
-    )
-
-    trace_1 = go.Scatter(
-        x=df_subset[df_subset["stat_sig"] == 1].index,
-        y=df_subset[df_subset["stat_sig"] == 1]["obs_effect"],
-        mode="markers",
-        marker=dict(color=color_map[1], size=8),
-        name="Significant",
-        hovertemplate="<b>Experiment #</b>: %{x}<br>" +
-                    "<b>Observed Lift</b>: %{y:.4f}<br>" +
-                    "<b>Stat Sig</b>: Significant<extra></extra>"
-    )
-    
-    # Create the figure
-    fig = go.Figure([trace_0, trace_1])
-
-    # Update layout
-    fig.update_layout(
-        title="First 100 Experiment Results",
-        title_x=0.5,  # Center-align title
-        xaxis_title="Experiment #",
-        yaxis_title="Lift",
-        template="plotly_dark",
-        legend_title="Stat Sig"
-    )
-
-    st.plotly_chart(fig)  # Display Plotly scatter plot in Streamlit
-
     # --- Histogram Visualization ---
-    st.subheader("Distribution of Observed Effects")
+    st.subheader("Distribution of Observed Lifts")
 
     # Compute the mean observed effect for stat_sig == 1
     mean_effect_sig = df[df['stat_sig'] == 1]['obs_effect'].mean()
@@ -131,21 +92,24 @@ if st.sidebar.button("Run Simulation"):
     ax.axvline(lift, color="black", linestyle="dotted", linewidth=2)
 
     # Add annotation for Real Lift
-    ax.annotate(f"Real Lift: {lift:.4f}", xy=(lift, ax.get_ylim()[1] * 0.9), 
+    ax.annotate(f"Real Lift: {lift:.1%}", xy=(lift, ax.get_ylim()[1] * 0.9), 
                 xytext=(-50, 10), textcoords="offset points",
                 fontsize=12, color="black", bbox=dict(facecolor="lightgray", edgecolor="black", boxstyle="round,pad=0.3"),
                 arrowprops=dict(arrowstyle="->", color="black"))
 
     # Add annotation for Mean Observed Effect
-    ax.annotate(f"Avg Obs. Effect (Signif.): {mean_effect_sig:.4f}", xy=(mean_effect_sig, ax.get_ylim()[1] * 0.9), 
+    ax.annotate(f"Avg Obs. Lift\n(Signif.): {mean_effect_sig:.1%}", xy=(mean_effect_sig, ax.get_ylim()[1] * 0.9), 
                 xytext=(50, 10), textcoords="offset points",
                 fontsize=12, color="black", bbox=dict(facecolor="white", edgecolor="black", boxstyle="round,pad=0.3"),
                 arrowprops=dict(arrowstyle="->", color="black"))
 
     # Customize aesthetics
-    ax.set_title("Histogram of Observed Lifts", fontsize=18, fontweight="bold", loc="left")
+    #ax.set_title("Histogram of Observed Lifts", fontsize=18, fontweight="bold", loc="left")
     ax.set_xlabel("Observed Lift", fontsize=14)
-    ax.set_ylabel("Count", fontsize=14)
+    ax.set_ylabel("Exp. count", fontsize=14)
+
+    # Format x-axis as percentage
+    ax.xaxis.set_major_formatter(mticker.PercentFormatter(xmax=1, decimals=0))
 
     # Create a custom legend with only the segments
     legend_patches = [
@@ -160,3 +124,58 @@ if st.sidebar.button("Run Simulation"):
 
     # Display the Seaborn plot in Streamlit
     st.pyplot(fig)
+
+# --- Insert Scatter Plot ---
+    st.subheader("Data Check - First 100 Experiment Results")
+    st.write("Hover over each dot to see more details of each simulated experiment (first 100 only).")
+    #st.write("The experiments were simulated using 'Real' Control CVR = {conv_control:.2%} and 'Real' Variant CVR = {conv_variant:.2%} ({lift:.0%} 'Real' Lift) but each individual experiment will have different **observed** values due to inherent variability.")
+
+    # Define colors for stat_sig categories
+    color_map = {1: "blue", 0: "red"}
+
+    # Subset first 100 experiments
+    df_subset = df.head(100)
+
+    # Create scatter plot traces for each category
+    trace_0 = go.Scatter(
+        x=df_subset[df_subset["stat_sig"] == 0].index,
+        y=df_subset[df_subset["stat_sig"] == 0]["obs_effect"],
+        mode="markers",
+        marker=dict(color=color_map[0], size=8),
+        name="Not Significant",
+        customdata=df_subset[df_subset["stat_sig"] == 0][["obs_control", "obs_variant"]],  # Include additional data
+        hovertemplate="<b>Experiment #</b>: %{x}<br>" +
+                  "<b>CVR Control</b>: %{customdata[0]:.2%}<br>" +  
+                  "<b>CVR Variant</b>: %{customdata[1]:.2%}<br>" +
+                  "<b>Observed Lift</b>: %{y:.2%}<br>" +
+                  "<b>Stat Sig</b>: Not Significant<extra></extra>" 
+    )
+
+    trace_1 = go.Scatter(
+        x=df_subset[df_subset["stat_sig"] == 1].index,
+        y=df_subset[df_subset["stat_sig"] == 1]["obs_effect"],
+        mode="markers",
+        marker=dict(color=color_map[1], size=8),
+        name="Significant",
+        customdata=df_subset[df_subset["stat_sig"] == 1][["obs_control", "obs_variant"]],  # Include additional data
+        hovertemplate="<b>Experiment #</b>: %{x}<br>" +
+                  "<b>CVR Control</b>: %{customdata[0]:.2%}<br>" +  
+                  "<b>CVR Variant</b>: %{customdata[1]:.2%}<br>" +
+                  "<b>Observed Lift</b>: %{y:.2%}<br>" +
+                  "<b>Stat Sig</b>: Significant<extra></extra>" 
+    )
+    
+    # Create the figure
+    fig = go.Figure([trace_0, trace_1])
+
+    # Update layout
+    fig.update_layout(
+       # title="First 100 Experiment Results",
+       # title_x=0.5,  # Center-align title
+        xaxis_title="Experiment #",
+        yaxis_title="Lift",
+        template="plotly_dark",
+        legend_title="Stat Sig"
+    )
+
+    st.plotly_chart(fig)  # Display Plotly scatter plot in Streamlit
