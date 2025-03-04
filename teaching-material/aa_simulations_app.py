@@ -36,7 +36,7 @@ if st.sidebar.button("Run Simulation"):
     #st.write("🔄 Running A/A Test Simulations...")
 
     # Create DataFrame
-    df = pd.DataFrame(columns=('n', 'stat_sig', 'obs_effect', 'p-conf_level'))
+    df = pd.DataFrame(columns=('n', 'stat_sig', 'obs_effect', 'conf_level'))
 
     # Simulate A/A tests
     for k in range(n_tests):
