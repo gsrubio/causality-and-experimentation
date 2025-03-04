@@ -36,7 +36,7 @@ if st.sidebar.button("Run Simulation"):
     #st.write("🔄 Running A/A Test Simulations...")
 
     # Create DataFrame
-    df = pd.DataFrame(columns=('n', 'stat_sig', 'obs_effect', 'p-value'))
+    df = pd.DataFrame(columns=('n', 'stat_sig', 'obs_effect', 'p-conf_level'))
 
     # Simulate A/A tests
     for k in range(n_tests):
@@ -59,11 +59,12 @@ if st.sidebar.button("Run Simulation"):
         count = np.array([success_B, success_A])
         nobs = np.array([trials_B, trials_A])
         z_stat, p_value = proportions_ztest(count, nobs, alternative='two-sided')
+        conf_level = 1-p_value
         stat_sig = 1 if p_value < alpha else 0
         obs_effect = (success_B / success_A) -1
 
         # save results into dataframe
-        record = [n_obs, stat_sig, obs_effect, p_value]
+        record = [n_obs, stat_sig, obs_effect, conf_level]
         df.loc[len(df)] = record
 
 
@@ -126,14 +127,14 @@ if st.sidebar.button("Run Simulation"):
     st.plotly_chart(fig)
 
     # --- Histogram Visualization of p-values ---
-    st.subheader("Distribution of p-values")
+    st.subheader("Distribution of Confidence Levels")
 
     # Define color mapping: stat_sig=1 (Red), stat_sig=0 (Blue)
     color_map = {1: "red", 0: "blue"}
 
     fig = px.histogram(
     df, 
-    x="p-value", 
+    x="conf_level", 
     hover_data=df.columns,
     color='stat_sig',
     color_discrete_map=color_map,  # 🔹 Ensure color consistency
