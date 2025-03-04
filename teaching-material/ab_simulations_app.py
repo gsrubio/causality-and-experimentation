@@ -1,15 +1,15 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+#import matplotlib.pyplot as plt
+#import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
-import matplotlib.patches as mpatches
+#import matplotlib.patches as mpatches
 from statsmodels.stats.proportion import proportions_ztest
 from statsmodels.stats.proportion import proportion_effectsize
 from statsmodels.stats.power import NormalIndPower
-import matplotlib.ticker as mticker  # Import PercentFormatter
+#import matplotlib.ticker as mticker  # Import PercentFormatter
 import random # Import random module
 
 
