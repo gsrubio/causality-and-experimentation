@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 import random
 
 # Title
-st.title("A/B Test Monitoring Dashboard Simulation")
+st.title("A/B Test Monitoring Simulation")
 
 # Sidebar controls
 st.sidebar.header("Test Parameters")
