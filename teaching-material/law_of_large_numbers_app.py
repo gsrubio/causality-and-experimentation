@@ -5,14 +5,14 @@ import plotly.graph_objects as go
 import random
 
 # Title
-st.title("A/B Test Simulation Dashboard")
+st.title("A/B Test Monitoring Dashboard Simulation")
 
 # Sidebar controls
 st.sidebar.header("Test Parameters")
 
 #n_obs = st.sidebar.number_input("Total Observations", value=26000)
 #variants = st.sidebar.selectbox("Number of Variants", options=[2, 3], index=1)
-n_obs_group = st.sidebar.number_input("Visitors per variant", value=26000)
+n_obs_group = st.sidebar.number_input("Visitors per day per variant", value=26000)
 cvr_control = st.sidebar.number_input("Baseline CVR (Control)", value=0.015, step=0.001, format="%.4f")
 lift = st.sidebar.slider("True Lift (Variant vs Control)", min_value=0.0, max_value=0.5, value=0.09, step=0.01)
 days = st.sidebar.slider("Duration (Days)", min_value=10, max_value=100, value=40)
