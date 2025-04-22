@@ -1,137 +1,109 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-#import matplotlib.pyplot as plt
-#import seaborn as sns
 import plotly.express as px
-import plotly.graph_objects as go
-#import matplotlib.patches as mpatches
 from statsmodels.stats.proportion import proportions_ztest
-from statsmodels.stats.proportion import proportion_effectsize
-from statsmodels.stats.power import NormalIndPower
-#import matplotlib.ticker as mticker  # Import PercentFormatter
-import random # Import random module
+from scipy.stats import norm
 
 
-# Sidebar parameters
+# --- Sidebar: Metric Selection & Common Inputs ---
 st.sidebar.header("Simulation Parameters")
-st.sidebar.write("10,000 A/B tests will be simulated with the following parameters:")
+metric = st.sidebar.selectbox("📊 Select the metric:", ["CVR (Conversion Rate)", "Sales per Visitor"])
+
 n_obs = st.sidebar.number_input("Sample Size per Variant", min_value=100, max_value=1000000, value=10000, step=1000)
-conv_control = st.sidebar.number_input("Baseline CVR", min_value=0.01, max_value=0.5, value=0.015, step=0.001, format="%.3f")
-lift = st.sidebar.slider("True Lift", 0.01, 0.2, 0.05, 0.01, format="%.2f")
+lift = st.sidebar.number_input("True Lift (%)", min_value=0.001, max_value=0.5, value=0.015, step=0.0001, format="%.3f")  # Relative lift
+observed_lift = st.sidebar.number_input("Observed Lift (for comparison)", min_value=0.0, max_value=1.0, value=0.01, step=0.001, format="%.3f")
 alpha = st.sidebar.slider("One-Sided Significance Level (α)", 0.01, 0.1, 0.05, 0.01)
-#power = st.sidebar.slider("Power", 0.8, 1.0, 0.8, 0.01)
 
 n_tests = 10000
-conv_variant = conv_control * (1 + lift)
-#effect_size = proportion_effectsize(expected_conv_variant, conv_control)  # Calculate effect size for variant population with convertion rate of 21% and control population with convertion rate of 20%
-#n_obs = NormalIndPower().solve_power(effect_size=effect_size, alpha=alpha, nobs1=None, power=power, ratio=1.0, alternative='larger')
-#n_obs = int(np.ceil(n_obs))  # Round up to nearest whole number
 
-# Button to run the simulation
+# --- Metric-specific inputs ---
+if metric == "CVR (Conversion Rate)":
+    conv_control = st.sidebar.number_input("Baseline CVR", min_value=0.001, max_value=0.5, value=0.015, step=0.0001, format="%.3f")
+    conv_variant = conv_control * (1 + lift)
+elif metric == "Sales per Visitor":
+    mean_control = st.sidebar.number_input("Control Sales/Visitor", value=2.25)
+    std_dev = st.sidebar.number_input("Standard Deviation", value=19.5)
+    mean_variant = mean_control * (1 + lift)
+
+# --- Run Simulation ---
 if st.sidebar.button("Run Simulation"):
-    #st.write("🔄 Running A/B Test Simulations...")
 
-    # Create DataFrame
     df = pd.DataFrame(columns=('n', 'obs_effect', 'conf_level', 'stat_sig', 'obs_control', 'obs_variant'))
 
-    # Simulate A/B tests
     for _ in range(n_tests):
-        # Sample from control and variant distributions
-        success_A = np.random.binomial(n_obs, conv_control)
-        success_B = np.random.binomial(n_obs, conv_variant)
-        obs_control = success_A / n_obs
-        obs_variant = success_B / n_obs
+        if metric == "CVR (Conversion Rate)":
+            success_A = np.random.binomial(n_obs, conv_control)
+            success_B = np.random.binomial(n_obs, conv_variant)
 
-        # Perform hypothesis testing
-        count = np.array([success_B, success_A])
-        nobs = np.array([n_obs, n_obs])
-        z_stat, p_value = proportions_ztest(count, nobs, alternative='larger')
-        conf_level = 1-p_value
+            obs_control = success_A / n_obs
+            obs_variant = success_B / n_obs
+
+            # Z-test for proportions
+            z_stat, p_value = proportions_ztest([success_B, success_A], [n_obs, n_obs], alternative='larger')
+
+        elif metric == "Sales per Visitor":
+            group_A = np.random.normal(loc=mean_control, scale=std_dev, size=n_obs)
+            group_B = np.random.normal(loc=mean_variant, scale=std_dev, size=n_obs)
+
+            obs_control = group_A.mean()
+            obs_variant = group_B.mean()
+
+            # T-test for independent samples (1-sided, equal variance assumed)
+            se = np.sqrt((std_dev**2 / n_obs) * 2)
+            t_stat = (obs_variant - obs_control) / se
+            p_value = 1 - norm.cdf(t_stat)
+
+        obs_effect = (obs_variant / obs_control) - 1
         stat_sig = 1 if p_value < alpha else 0
-        obs_effect = (success_B / success_A) - 1
+        conf_level = 1 - p_value
 
-        # Save results
-        record = [n_obs, obs_effect, conf_level, stat_sig, obs_control, obs_variant]
-        df.loc[len(df)] = record
+        df.loc[len(df)] = [n_obs, obs_effect, conf_level, stat_sig, obs_control, obs_variant]
 
-    # Compute summary statistics
-    summary = { 
-        "Total Tests": f"{df['n'].count():,}",  # No decimal places
-        "Significant Tests": f"{int(df['stat_sig'].sum()):,}",  # No decimal places, thousand separator
-        "Observed Power": f"{df['stat_sig'].mean():.1%}",  # Percent format
-        "True Lift": f"{lift:.1%}",  
+    # --- Summary ---
+    pct_gte_observed = (df["obs_effect"] >= observed_lift).mean()
+    summary = {
+        "Total Tests": f"{df['n'].count():,}",
+        "Significant Tests": f"{int(df['stat_sig'].sum()):,}",
+        "Observed Power": f"{df['stat_sig'].mean():.1%}",
+        "True Lift": f"{lift:.1%}",
+        f"Tests ≥ {observed_lift:.1%} Observed Lift": f"{pct_gte_observed:.1%}",
     }
 
-    summary_df = pd.DataFrame([summary])
+    st.subheader(f"📊 Summary: {metric}")
+    st.dataframe(pd.DataFrame([summary]))
 
-    # Display summary table
-    #st.subheader("Summary of Simulated A/B Tests")
-    st.subheader("📊 **Aggregated results from simulated tests:**")
-    #st.write(f"\nThe simulations used a 'Real' Control CVR = {conv_control:.2%} and 'Real' Variant CVR = {conv_variant:.2%} ({lift:.0%} 'Real' Lift).")
-    st.dataframe(summary)
-
-    # --- Histogram Visualization ---
+    # --- Histogram: Observed Lifts ---
     st.subheader("Distribution of Observed Lifts")
-
-    # Compute the mean of obs_effect
-    mean_obs_effect = df["obs_effect"].mean()
-
-    # Define color mapping: stat_sig=1 (Red), stat_sig=0 (Blue)
-    color_map = {0: "red", 1: "blue"}
-
-    # Create histogram
-    fig = px.histogram(
-        df, 
-        x="obs_effect", 
-        #marginal="rug",
-        hover_data=df.columns,
+    fig1 = px.histogram(
+        df,
+        x="obs_effect",
         color='stat_sig',
-        color_discrete_map=color_map, 
+        color_discrete_map={0: "red", 1: "blue"},
+        hover_data=df.columns,
         template='plotly_dark',
         height=300
     )
-
-    # Add vertical line for the mean
-    fig.add_vline(
-        x=mean_obs_effect, 
-        line_dash="dash", 
-        line_color="grey", 
-        annotation_text=f"Mean: {mean_obs_effect:.2%}",
-        annotation_position="top"
+    fig1.add_vline(
+        x=df["obs_effect"].mean(),
+        line_dash="dash",
+        line_color="gray",
+        annotation_text=f"Mean: {df['obs_effect'].mean():.2%}"
     )
+    fig1.update_layout(xaxis=dict(tickformat=".0%", title="Observed Lift"))
+    st.plotly_chart(fig1)
 
-    # Format x-axis as percentage
-    fig.update_layout(
-        xaxis=dict(
-            tickformat=".0%",  # 🔹 Display values as percentages
-            title="Observed Lift (%)"  # Update x-axis title
-        )
-    )
-
-    # Display the Seaborn plot in Streamlit
-    st.plotly_chart(fig)
-
-    # --- Histogram Visualization of p-values ---
+    # --- Histogram: Confidence Levels ---
     st.subheader("Distribution of Confidence Levels")
-
-    # Define color mapping: stat_sig=1 (Red), stat_sig=0 (Blue)
-    color_map = {0: "red", 1: "blue"}
-
-    fig = px.histogram(
-    df, 
-    x="conf_level", 
-    hover_data=df.columns,
-    color='stat_sig',
-    color_discrete_map=color_map,  # 🔹 Ensure color consistency
-    nbins=10,  # Ensures 10 bins
-    height=300
+    fig2 = px.histogram(
+        df,
+        x="conf_level",
+        color='stat_sig',
+        color_discrete_map={0: "red", 1: "blue"},
+        nbins=10,
+        height=300
     )
-
-    # Adjust bins to ensure 1 is included
-    fig.update_traces(
-        xbins=dict(start=0, end=1.001, size=(1.0000001-0)/10)  # Slightly extend end to include 1
+    fig2.update_traces(
+        xbins=dict(start=0, end=1.001, size=(1.0000001 - 0) / 10)
     )
-
-     # Display the Seaborn plot in Streamlit
-    st.plotly_chart(fig)
+    st.plotly_chart(fig2)

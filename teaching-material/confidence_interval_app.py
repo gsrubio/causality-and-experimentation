@@ -11,7 +11,7 @@ st.title("📈 Lift and Confidence Interval Calculator")
 
 with st.sidebar:
     metric = st.selectbox("📊 Select the metric:", ["CVR (Conversion Rate)", "Sales per Visitor"])
-    conf_level = st.slider("🎯 Confidence Level:", min_value=0.20, max_value=0.99, value=0.80, step=0.01)
+    conf_level = st.slider("🎯 Confidence Level:", min_value=0.50, max_value=0.99, value=0.80, step=0.01)
     test_type = st.radio("Test Type:", options=["Two-sided", "One-sided"], index=0)
     alpha = 1 - conf_level
     min_alpha = 0.01  # for fixed axis bounds
