@@ -40,7 +40,8 @@ st.dataframe(pd.DataFrame.from_dict(sample_summary, orient="index").T, use_conta
 
 # --- Simulation Inputs ---
 st.sidebar.header("🧪 Simulation Parameters")
-sim_sample_size = st.sidebar.number_input("Sample Size per Variant", min_value=100, value=sample_size_per_variant, step=100)
+sim_runtime = st.sidebar.number_input("Simulation Runtime", min_value=1, value=sim_runtime, step=1)
+sim_sample_size = sim_runtime * (daily_traffic/2)
 true_lift = st.sidebar.number_input("True Lift (%)", min_value=0.0, max_value=100.0, value=10.0, step=0.1) / 100
 n_simulations = 10000
 alt = 'two-sided' if test_type == "Two-sided" else 'larger'
