@@ -40,7 +40,7 @@ st.dataframe(pd.DataFrame.from_dict(sample_summary, orient="index").T, use_conta
 
 # --- Simulation Inputs ---
 st.sidebar.header("🧪 Simulation Parameters")
-sim_runtime = st.sidebar.number_input("Simulation Runtime", min_value=1, value=sim_runtime, step=1)
+sim_runtime = st.sidebar.number_input("Simulation Runtime", min_value=1, value=runtime_days, step=1)
 sim_sample_size = sim_runtime * (daily_traffic/2)
 true_lift = st.sidebar.number_input("True Lift (%)", min_value=0.0, max_value=100.0, value=10.0, step=0.1) / 100
 n_simulations = 10000
