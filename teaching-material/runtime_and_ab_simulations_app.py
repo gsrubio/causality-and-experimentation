@@ -42,7 +42,7 @@ st.dataframe(pd.DataFrame.from_dict(sample_summary, orient="index").T, use_conta
 st.sidebar.header("🧪 Simulation Parameters")
 sim_runtime = st.sidebar.number_input("Simulation Runtime", min_value=1, value=runtime_days, step=1)
 sim_sample_size = sim_runtime * (daily_traffic/2)
-true_lift = st.sidebar.number_input("True Lift (%)", min_value=0.0, max_value=100.0, value=10.0, step=0.1) / 100
+true_lift = st.sidebar.number_input("True Lift (%)", min_value=-10.0, max_value=100.0, value=10.0, step=0.1) / 100
 n_simulations = 10000
 alt = 'two-sided' if test_type == "Two-sided" else 'larger'
 
@@ -64,6 +64,7 @@ if st.sidebar.button("Run Simulations"):
         df.loc[len(df)] = [obs_lift, stat_sig]
 
     sig_and_positive = ((df["stat_sig"] == 1) & (df["obs_lift"] > 0)).sum()
+    sig_and_negative = ((df["stat_sig"] == 1) & (df["obs_lift"] < 0)).sum()
     total_sig = int(df["stat_sig"].sum())
 
     if true_lift > 0:
@@ -77,6 +78,19 @@ if st.sidebar.button("Run Simulations"):
         st.markdown("#### 📈 Power Simulation Summary")
         st.dataframe(pd.DataFrame.from_dict(power_summary, orient="index").T, use_container_width=True, hide_index=True)
 
+    
+    elif test_type == "Two-sided":
+        observed_power = sig_and_negative / n_simulations
+        power_summary = {
+            "🔁 Simulations Ran": f"{n_simulations:,}",
+            "✅ Statsig Simulations": f"{total_sig:,}",
+            "📈 Negative Statsig Lifts": f"{sig_and_negative:,}",
+            "⚡ Observed Power": f"{observed_power:.1%}"
+        }
+        st.markdown("#### 📈 Power Simulation Summary")
+        st.dataframe(pd.DataFrame.from_dict(power_summary, orient="index").T, use_container_width=True, hide_index=True)
+
+    
     else:
         false_positive_rate = total_sig / n_simulations
         false_positive_winners = sig_and_positive / n_simulations
