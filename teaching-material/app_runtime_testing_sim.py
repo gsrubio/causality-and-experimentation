@@ -95,12 +95,14 @@ if st.sidebar.button("Run Simulations"):
     elif test_type == "Two-sided" and true_lift == 0:
         false_positive_rate = total_sig / n_simulations
         false_positive_winners = sig_and_positive / n_simulations
+        false_negative_winners = sig_and_negative / n_simulations
         power_summary = {
             "🔁 Simulations Ran": f"{n_simulations:,}",
             "✅ Statsig Simulations": f"{total_sig:,}",
             "📈 Statsig Simulations with Positive Lift": f"{sig_and_positive:,}",
             "🚨 False Alarm Rate": f"{false_positive_rate:.1%}",
-            "🚨 False 'Winners'": f"{false_positive_winners:.1%}"
+            "🚨 False 'Winners'": f"{false_positive_winners:.1%}",
+            "🚨 False 'Losers'": f"{false_negative_winners:.1%}"
         }
         st.markdown("#### 📈 Power Simulation Summary")
         st.dataframe(pd.DataFrame.from_dict(power_summary, orient="index").T, use_container_width=True, hide_index=True)

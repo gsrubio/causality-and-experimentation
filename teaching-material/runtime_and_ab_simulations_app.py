@@ -72,34 +72,47 @@ if st.sidebar.button("Run Simulations"):
         power_summary = {
             "🔁 Simulations Ran": f"{n_simulations:,}",
             "✅ Statsig Simulations": f"{total_sig:,}",
-            "📈 Positive Statsig Lifts": f"{sig_and_positive:,}",
+            "📈 Statsig Simulations with Positive Lift": f"{sig_and_positive:,}",
             "⚡ Observed Power": f"{observed_power:.1%}"
         }
         st.markdown("#### 📈 Power Simulation Summary")
         st.dataframe(pd.DataFrame.from_dict(power_summary, orient="index").T, use_container_width=True, hide_index=True)
 
+    elif test_type == "One-sided":
+        false_positive_rate = total_sig / n_simulations
+        false_positive_winners = sig_and_positive / n_simulations
+        fp_summary = {
+            "🔁 Simulations Ran": f"{n_simulations:,}",
+            "✅ Statsig Simulations": f"{total_sig:,}",
+            "📈 Statsig Simulations with Positive Lift": f"{sig_and_positive:,}",
+            "🚨 False Alarm Rate": f"{false_positive_rate:.1%}",
+            "🚨 False 'Winners'": f"{false_positive_winners:.1%}"
+        }
+        st.markdown("#### 🚨 False Positive Summary")
+        st.dataframe(pd.DataFrame.from_dict(fp_summary, orient="index").T, use_container_width=True, hide_index=True)
+
     
-    elif test_type == "Two-sided":
-        observed_power = sig_and_negative / n_simulations
+    elif test_type == "Two-sided" and true_lift == 0:
+        false_positive_rate = total_sig / n_simulations
+        false_positive_winners = sig_and_positive / n_simulations
         power_summary = {
             "🔁 Simulations Ran": f"{n_simulations:,}",
             "✅ Statsig Simulations": f"{total_sig:,}",
-            "📈 Negative Statsig Lifts": f"{sig_and_negative:,}",
-            "⚡ Observed Power": f"{observed_power:.1%}"
+            "📈 Statsig Simulations with Positive Lift": f"{sig_and_positive:,}",
+            "🚨 False Alarm Rate": f"{false_positive_rate:.1%}",
+            "🚨 False 'Winners'": f"{false_positive_winners:.1%}"
         }
         st.markdown("#### 📈 Power Simulation Summary")
         st.dataframe(pd.DataFrame.from_dict(power_summary, orient="index").T, use_container_width=True, hide_index=True)
 
     
     else:
-        false_positive_rate = total_sig / n_simulations
-        false_positive_winners = sig_and_positive / n_simulations
+        observed_power = sig_and_negative / n_simulations
         fp_summary = {
             "🔁 Simulations Ran": f"{n_simulations:,}",
             "✅ Statsig Simulations": f"{total_sig:,}",
-            "📈 Positive Statsig Lifts": f"{sig_and_positive:,}",
-            "📊 False Positive Rate": f"{false_positive_rate:.1%}",
-            "🚨 False Positive Winners": f"{false_positive_winners:.1%}"
+            "📉 Statsig Simulations with Negative Lift": f"{sig_and_negative:,}",
+            "⚡ Observed Power": f"{observed_power:.1%}"
         }
         st.markdown("#### 🚨 False Positive Summary")
         st.dataframe(pd.DataFrame.from_dict(fp_summary, orient="index").T, use_container_width=True, hide_index=True)
