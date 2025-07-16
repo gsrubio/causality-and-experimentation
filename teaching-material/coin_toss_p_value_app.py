@@ -9,8 +9,8 @@ st.write("Simulate coin tosses and visualize the distribution of observed propor
 
 # Sidebar inputs
 st.sidebar.header("Simulation Parameters")
-n_tests = st.sidebar.number_input("Number of replications", min_value=100, max_value=50000, value=10000, step=100)
-n_obs = st.sidebar.number_input("Number of tosses per replication", min_value=10, max_value=1000000, value=100, step=10)
+n_tests = st.sidebar.number_input("Number of replications", min_value=100, max_value=50000, value=1000, step=100)
+n_obs = st.sidebar.number_input("Number of tosses per replication", min_value=10, max_value=1000000, value=1000, step=10)
 conv_control = st.sidebar.number_input("Fair Coin Probability (Heads)", min_value=0.0, max_value=1.0, value=0.5, step=0.01)
 effect = st.sidebar.number_input("Coin Bias (additive)", min_value=-0.5, max_value=0.5, value=0.0, step=0.01)
 alpha = st.sidebar.slider("Significance Level (α)", 0.01, 0.5, 0.05, 0.01)
@@ -61,27 +61,28 @@ if st.sidebar.button("Run Simulation"):
     fig1.update_layout(xaxis=dict(tickformat=".0%", title="Observed Proportion (Heads)"))
     st.plotly_chart(fig1)
 
-    # Histogram of p-values
-    st.subheader("Distribution of P-values")
-    fig2 = px.histogram(
-        df,
-        x="p_value",
-        nbins=50,
-        template="plotly_dark",
-        height=300
-    )
-    fig2.add_vline(
-        x=alpha,
-        line_dash="dash",
-        line_color="red",
-        annotation_text=f"Alpha: {alpha:.2f}",
-        annotation_position="top"
-    )
-    fig2.update_layout(xaxis=dict(title="P-value"))
-    st.plotly_chart(fig2)
+    # # Histogram of p-values
+    # st.subheader("Distribution of P-values")
+    # fig2 = px.histogram(
+    #     df,
+    #     x="p_value",
+    #     nbins=50,
+    #     template="plotly_dark",
+    #     height=300
+    # )
+    # fig2.add_vline(
+    #     x=alpha,
+    #     line_dash="dash",
+    #     line_color="red",
+    #     annotation_text=f"Alpha: {alpha:.2f}",
+    #     annotation_position="top"
+    # )
+    # fig2.update_layout(xaxis=dict(title="P-value"))
+    # st.plotly_chart(fig2)
 
     # Scatter plot: Observed Proportion vs P-value
-    st.subheader("Observed Proportion vs P-value")
+    st.subheader("Observed Proportion vs 2-tailed p-value")
+    df["confidence_two_sided"] = 1 - df["p_value"]
     fig3 = px.scatter(
         df,
         x="obs_prop",
@@ -89,7 +90,7 @@ if st.sidebar.button("Run Simulation"):
         template="plotly_dark",
         height=400,
         opacity=0.7,
-        hover_data={"obs_prop": ':.1%', "p_value": ':.2f'}
+        hover_data={"obs_prop": ':.1%', "p_value": ':.2f', "confidence_two_sided": ':.0%'}
     )
     fig3.add_hline(
         y=alpha,
@@ -107,28 +108,31 @@ if st.sidebar.button("Run Simulation"):
     )
     fig3.update_layout(
         xaxis=dict(tickformat=".0%", title="Observed Proportion (Heads)"),
-        yaxis=dict(title="P-value", range=[0, 1])
+        yaxis=dict(title="2-tailed p-value", range=[0, 1.1])
     )
     st.plotly_chart(fig3)
 
     # Scatter plot: Observed Proportion vs Confidence
-    st.subheader("Observed Proportion vs 'Confidence'")
-    df["confidence"] = 1 - (df["p_value"] / 2)
+    st.subheader("Observed Proportion vs 1-tailed p-value")
+    df['p_value_one_sided'] = df['p_value']/2
+    df["confidence_one_sided"] = 1 - df['p_value_one_sided']
     confidence_at_alpha = 1 - (alpha / 2)
+    p_value_at_alpha = alpha/2
+
     fig4 = px.scatter(
         df,
         x="obs_prop",
-        y="confidence",
+        y="p_value_one_sided",
         template="plotly_dark",
         height=400,
         opacity=0.7,
-        hover_data={"obs_prop": ':.1%', "confidence": ':.2f'}
+        hover_data={"obs_prop": ':.1%', "p_value_one_sided": ':.2f', "confidence_one_sided": ':.0%'}
     )
     fig4.add_hline(
-        y=confidence_at_alpha,
+        y=p_value_at_alpha,
         line_dash="dash",
         line_color="red",
-        annotation_text=f"Conf.: {confidence_at_alpha:.2f}",
+        annotation_text=f"Alpha: {p_value_at_alpha:.2f}",
         annotation_position="top left"
     )
     fig4.add_vline(
@@ -140,6 +144,6 @@ if st.sidebar.button("Run Simulation"):
     )
     fig4.update_layout(
         xaxis=dict(tickformat=".0%", title="Observed Proportion (Heads)"),
-        yaxis=dict(title="'Confidence' (1 - p-value/2)", range=[0, 1.1])
+        yaxis=dict(title="1-tailed p-value", range=[0, 0.6])
     )
     st.plotly_chart(fig4) 
